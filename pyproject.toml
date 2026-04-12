@@ -6,6 +6,7 @@ requires-python = ">=3.11"
 dependencies = [
     "aiohttp>=3.9,<4",
     "music-assistant-client>=1.0,<2",
+    "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]

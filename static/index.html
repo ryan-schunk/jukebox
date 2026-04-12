@@ -35,10 +35,6 @@
           <span id="duration">0:00</span>
         </div>
       </div>
-      <div class="np-indicators">
-        <span id="shuffle-indicator" class="indicator hidden">SHUFFLE</span>
-        <span id="favorite-indicator" class="indicator hidden">&hearts;</span>
-      </div>
     </section>
 
     <!-- BROWSE -->
@@ -46,6 +42,22 @@
       <h2 class="screen-title">Albums</h2>
       <div id="album-list" class="item-list">
         <div id="albums-empty" class="empty-message hidden">No albums found</div>
+      </div>
+    </section>
+
+    <!-- ARTISTS -->
+    <section id="artists" class="screen">
+      <h2 class="screen-title">Artists</h2>
+      <div id="artist-list" class="item-list">
+        <div id="artists-empty" class="empty-message hidden">No artists found</div>
+      </div>
+    </section>
+
+    <!-- ARTIST ALBUMS (drill-in) -->
+    <section id="artist-albums" class="screen">
+      <h2 class="screen-title" id="artist-albums-title">Albums</h2>
+      <div id="artist-album-list" class="item-list">
+        <div id="artist-albums-empty" class="empty-message hidden">No albums found</div>
       </div>
     </section>
 
@@ -63,9 +75,7 @@
     <div class="btn-label" id="btn1-label">Play/Pause</div>
     <div class="btn-label" id="btn2-label">Previous</div>
     <div class="btn-label" id="btn3-label">Next</div>
-    <div class="btn-label" id="btn4-label">Favorite</div>
-    <div class="btn-label" id="btn5-label">Shuffle</div>
-    <div class="btn-label" id="btn6-label">Next Screen</div>
+    <div class="btn-label" id="btn4-label">Next Screen</div>
   </nav>
 
   <script src="/static/app.js"></script>

@@ -173,24 +173,6 @@ html, body {
   padding-top: 4px;
 }
 
-.np-indicators {
-  display: flex;
-  gap: 12px;
-  padding-bottom: 8px;
-}
-
-.indicator {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.indicator.hidden {
-  visibility: hidden;
-}
-
 /* === Item Lists (Browse + Queue) === */
 .screen-title {
   font-size: 1.2rem;
@@ -304,6 +286,20 @@ html, body {
   letter-spacing: 0.05em;
   padding: 4px;
   line-height: 1.3;
+  cursor: pointer;
+  user-select: none;
+}
+
+.btn-label:active {
+  color: var(--accent);
+}
+
+.btn-label.disabled {
+  opacity: 0.25;
+}
+
+.btn-label.disabled::before {
+  opacity: 0.5;
 }
 
 .btn-label::before {

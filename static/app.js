@@ -4,8 +4,6 @@ const KEY_MAP = {
   "2": "btn2",
   "3": "btn3",
   "4": "btn4",
-  "5": "btn5",
-  "6": "btn6",
 };
 
 // === Button labels per screen ===
@@ -14,47 +12,65 @@ const SCREEN_LABELS = {
     btn1: "Play/Pause",
     btn2: "Previous",
     btn3: "Next",
-    btn4: "Favorite",
-    btn5: "Shuffle",
-    btn6: "Next Screen",
+    btn4: "Next Screen",
   },
   browse: {
     btn1: "Select",
     btn2: "Up",
     btn3: "Down",
-    btn4: "Favorite",
-    btn5: "Shuffle",
-    btn6: "Next Screen",
+    btn4: "Next Screen",
   },
-  queue: {
-    btn1: "Remove",
+  artists: {
+    btn1: "Select",
     btn2: "Up",
     btn3: "Down",
-    btn4: "Favorite",
-    btn5: "Shuffle",
-    btn6: "Next Screen",
+    btn4: "Next Screen",
+  },
+  "artist-albums": {
+    btn1: "Select",
+    btn2: "Up",
+    btn3: "Down",
+    btn4: "Back",
+  },
+  queue: {
+    btn1: "",
+    btn2: "Up",
+    btn3: "Down",
+    btn4: "Next Screen",
   },
 };
 
 // === State ===
-const SCREENS = ["now-playing", "browse", "queue"];
+const SCREENS = ["now-playing", "browse", "artists", "queue"];
 let currentScreen = 0;
+let drillScreen = null; // e.g. "artist-albums" — overrides SCREENS[currentScreen] when set
 let ws = null;
 let reconnectDelay = 1000;
 
 let state = {
   connected: false,
   playing: false,
-  shuffle: false,
   track: null,
   elapsed: 0,
   duration: 0,
+  has_next: false,
+  has_previous: false,
 };
 
 // Browse state
 let albums = [];
 let albumsLoaded = false;
 let browseIndex = 0;
+
+// Artists state
+let artists = [];
+let artistsLoaded = false;
+let artistIndex = 0;
+
+// Artist-albums (drill) state
+let artistAlbums = [];
+let artistAlbumsIndex = 0;
+let currentArtist = null;
 
 // Queue state
 let queueItems = [];
@@ -122,6 +138,18 @@ function handleMessage(msg) {
   } else if (msg.type === "queue") {
     queueItems = msg.data;
     renderQueueList();
+  } else if (msg.type === "artists") {
+    if (msg.offset === 0) {
+      artists = msg.data;
+    } else {
+      artists = artists.concat(msg.data);
+    }
+    artistsLoaded = true;
+    renderArtistList();
+  } else if (msg.type === "artist_albums") {
+    artistAlbums = msg.data;
+    artistAlbumsIndex = 0;
+    renderArtistAlbumList();
   } else if (msg.type === "error") {
     console.error("Server error:", msg.message);
   }
@@ -129,20 +157,30 @@ function handleMessage(msg) {
 
 // === Screen Management ===
 
-function switchScreen(index) {
-  currentScreen = index;
-  const screenId = SCREENS[currentScreen];
+function activeScreenId() {
+  return drillScreen || SCREENS[currentScreen];
+}
 
+function showScreen(screenId) {
   document.querySelectorAll(".screen").forEach((el) => {
     el.classList.remove("active");
   });
   document.getElementById(screenId).classList.add("active");
-
   updateButtonLabels();
+}
+
+function switchScreen(index) {
+  drillScreen = null;
+  currentScreen = index;
+  const screenId = SCREENS[currentScreen];
+  showScreen(screenId);
 
   // Load data when entering screens
   if (screenId === "browse" && !albumsLoaded) {
     send({ type: "command", action: "get_albums", offset: 0, limit: 50 });
+  }
+  if (screenId === "artists" && !artistsLoaded) {
+    send({ type: "command", action: "get_artists", offset: 0, limit: 50 });
   }
   if (screenId === "queue") {
     send({ type: "command", action: "get_queue" });
@@ -153,60 +191,97 @@ function cycleScreen() {
   switchScreen((currentScreen + 1) % SCREENS.length);
 }
 
+function enterArtistAlbums(artist) {
+  currentArtist = artist;
+  artistAlbums = [];
+  artistAlbumsIndex = 0;
+  document.getElementById("artist-albums-title").textContent = artist.name;
+  renderArtistAlbumList();
+  drillScreen = "artist-albums";
+  showScreen("artist-albums");
+  send({
+    type: "command",
+    action: "get_artist_albums",
+    artist_id: artist.id,
+    provider: artist.provider,
+  });
+}
+
+function exitDrill() {
+  drillScreen = null;
+  showScreen(SCREENS[currentScreen]);
+}
+
 function updateButtonLabels() {
-  const labels = SCREEN_LABELS[SCREENS[currentScreen]];
-  for (let i = 1; i <= 6; i++) {
+  const screen = activeScreenId();
+  const labels = SCREEN_LABELS[screen];
+  for (let i = 1; i <= 4; i++) {
     const el = document.getElementById(`btn${i}-label`);
     el.textContent = labels[`btn${i}`];
     el.setAttribute("data-key", i);
+    el.classList.remove("disabled");
   }
 
-  // Dynamic label for play/pause on Now Playing
-  if (SCREENS[currentScreen] === "now-playing") {
+  if (screen === "now-playing") {
     document.getElementById("btn1-label").textContent = state.playing
       ? "Pause"
       : "Play";
+    document.getElementById("btn2-label").classList.toggle("disabled", !state.has_previous);
+    document.getElementById("btn3-label").classList.toggle("disabled", !state.has_next);
   }
 }
 
 // === Input Handling (R11) ===
 
-document.addEventListener("keydown", (e) => {
-  const btn = KEY_MAP[e.key];
-  if (!btn) return;
-  e.preventDefault();
+function pressButton(btn) {
+  const screen = activeScreenId();
 
-  // Global buttons (same on every screen)
-  if (btn === "btn6") {
-    cycleScreen();
-    return;
-  }
+  // btn4: Back from a drill, else cycle screens
   if (btn === "btn4") {
-    send({ type: "command", action: "favorite" });
-    return;
-  }
-  if (btn === "btn5") {
-    send({ type: "command", action: "shuffle" });
+    if (drillScreen) {
+      exitDrill();
+    } else {
+      cycleScreen();
+    }
     return;
   }
 
   // Context-sensitive buttons (1-3)
-  const screen = SCREENS[currentScreen];
   if (screen === "now-playing") {
     handleNowPlayingButton(btn);
   } else if (screen === "browse") {
     handleBrowseButton(btn);
+  } else if (screen === "artists") {
+    handleArtistsButton(btn);
+  } else if (screen === "artist-albums") {
+    handleArtistAlbumsButton(btn);
   } else if (screen === "queue") {
     handleQueueButton(btn);
   }
+}
+
+document.addEventListener("keydown", (e) => {
+  const btn = KEY_MAP[e.key];
+  if (!btn) return;
+  e.preventDefault();
+  pressButton(btn);
 });
+
+for (let i = 1; i <= 4; i++) {
+  document.getElementById(`btn${i}-label`).addEventListener("click", () => {
+    pressButton(`btn${i}`);
+  });
+}
 
 // === Now Playing ===
 
 function handleNowPlayingButton(btn) {
   if (btn === "btn1") send({ type: "command", action: "play_pause" });
-  else if (btn === "btn2") send({ type: "command", action: "previous" });
-  else if (btn === "btn3") send({ type: "command", action: "next" });
+  else if (btn === "btn2") {
+    if (state.has_previous) send({ type: "command", action: "previous" });
+  } else if (btn === "btn3") {
+    if (state.has_next) send({ type: "command", action: "next" });
+  }
 }
 
 function updateNowPlaying() {
@@ -214,8 +289,6 @@ function updateNowPlaying() {
   const placeholder = document.getElementById("np-placeholder");
   const title = document.getElementById("np-title");
   const artist = document.getElementById("np-artist");
-  const shuffleInd = document.getElementById("shuffle-indicator");
-  const favInd = document.getElementById("favorite-indicator");
 
   if (state.track) {
     art.src = state.track.image_url || "";
@@ -223,22 +296,20 @@ function updateNowPlaying() {
     placeholder.classList.toggle("hidden", !!state.track.image_url);
     title.textContent = state.track.title;
     artist.textContent = state.track.artist;
-    favInd.classList.toggle("hidden", !state.track.favorite);
   } else {
     art.classList.add("hidden");
     placeholder.classList.remove("hidden");
     title.textContent = "";
     artist.textContent = "";
-    favInd.classList.add("hidden");
   }
 
-  shuffleInd.classList.toggle("hidden", !state.shuffle);
-
-  // Update play/pause label if on Now Playing screen
-  if (SCREENS[currentScreen] === "now-playing") {
+  // Update play/pause label + prev/next disabled state if on Now Playing
+  if (activeScreenId() === "now-playing") {
     document.getElementById("btn1-label").textContent = state.playing
       ? "Pause"
       : "Play";
+    document.getElementById("btn2-label").classList.toggle("disabled", !state.has_previous);
+    document.getElementById("btn3-label").classList.toggle("disabled", !state.has_next);
   }
 
   updateProgress();
@@ -292,6 +363,7 @@ function handleBrowseButton(btn) {
       send({
         type: "command",
         action: "play_album",
+        uri: album.uri,
         album_id: album.id,
       });
       switchScreen(0); // Go to Now Playing
@@ -361,24 +433,133 @@ function updateBrowseSelection() {
   }
 }
 
+// === Artists ===
+
+function handleArtistsButton(btn) {
+  if (btn === "btn1") {
+    if (artists.length > 0 && artistIndex < artists.length) {
+      enterArtistAlbums(artists[artistIndex]);
+    }
+  } else if (btn === "btn2") {
+    if (artistIndex > 0) {
+      artistIndex--;
+      updateArtistSelection();
+    }
+  } else if (btn === "btn3") {
+    if (artistIndex < artists.length - 1) {
+      artistIndex++;
+      updateArtistSelection();
+
+      if (artistIndex >= artists.length - 5 && artists.length % 50 === 0) {
+        send({
+          type: "command",
+          action: "get_artists",
+          offset: artists.length,
+          limit: 50,
+        });
+      }
+    }
+  }
+}
+
+function renderArtistList() {
+  const container = document.getElementById("artist-list");
+  const empty = document.getElementById("artists-empty");
+
+  container.querySelectorAll(".list-item").forEach((el) => el.remove());
+
+  if (artists.length === 0) {
+    empty.classList.remove("hidden");
+    return;
+  }
+  empty.classList.add("hidden");
+
+  artists.forEach((artist, i) => {
+    const el = document.createElement("div");
+    el.className = "list-item" + (i === artistIndex ? " selected" : "");
+    el.dataset.index = i;
+    el.innerHTML = `
+      <img class="list-item-art" src="${escapeAttr(artist.image_url)}" alt="" loading="lazy">
+      <div class="list-item-info">
+        <div class="list-item-title">${escapeHtml(artist.name)}</div>
+      </div>
+    `;
+    container.appendChild(el);
+  });
+}
+
+function updateArtistSelection() {
+  const container = document.getElementById("artist-list");
+  container.querySelectorAll(".list-item").forEach((el, i) => {
+    el.classList.toggle("selected", i === artistIndex);
+  });
+  const selected = container.querySelector(".list-item.selected");
+  if (selected) selected.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+
+// === Artist Albums (drill) ===
+
+function handleArtistAlbumsButton(btn) {
+  if (btn === "btn1") {
+    if (artistAlbums.length > 0 && artistAlbumsIndex < artistAlbums.length) {
+      const album = artistAlbums[artistAlbumsIndex];
+      send({ type: "command", action: "play_album", uri: album.uri, album_id: album.id });
+      drillScreen = null;
+      switchScreen(0); // Go to Now Playing
+    }
+  } else if (btn === "btn2") {
+    if (artistAlbumsIndex > 0) {
+      artistAlbumsIndex--;
+      updateArtistAlbumsSelection();
+    }
+  } else if (btn === "btn3") {
+    if (artistAlbumsIndex < artistAlbums.length - 1) {
+      artistAlbumsIndex++;
+      updateArtistAlbumsSelection();
+    }
+  }
+}
+
+function renderArtistAlbumList() {
+  const container = document.getElementById("artist-album-list");
+  const empty = document.getElementById("artist-albums-empty");
+
+  container.querySelectorAll(".list-item").forEach((el) => el.remove());
+
+  if (artistAlbums.length === 0) {
+    empty.classList.remove("hidden");
+    return;
+  }
+  empty.classList.add("hidden");
+
+  artistAlbums.forEach((album, i) => {
+    const el = document.createElement("div");
+    el.className = "list-item" + (i === artistAlbumsIndex ? " selected" : "");
+    el.dataset.index = i;
+    el.innerHTML = `
+      <img class="list-item-art" src="${escapeAttr(album.image_url)}" alt="" loading="lazy">
+      <div class="list-item-info">
+        <div class="list-item-title">${escapeHtml(album.name)}</div>
+        <div class="list-item-artist">${escapeHtml(album.artist)}</div>
+      </div>
+    `;
+    container.appendChild(el);
+  });
+}
+
+function updateArtistAlbumsSelection() {
+  const container = document.getElementById("artist-album-list");
+  container.querySelectorAll(".list-item").forEach((el, i) => {
+    el.classList.toggle("selected", i === artistAlbumsIndex);
+  });
+  const selected = container.querySelector(".list-item.selected");
+  if (selected) selected.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+
 // === Queue ===
 
 function handleQueueButton(btn) {
-  if (btn === "btn1") {
-    // Remove
-    if (queueItems.length > 0 && queueIndex < queueItems.length) {
-      const item = queueItems[queueIndex];
-      send({
-        type: "command",
-        action: "remove_queue_item",
-        item_id: item.id,
-      });
-      // Adjust index if we removed the last item
-      if (queueIndex >= queueItems.length - 1 && queueIndex > 0) {
-        queueIndex--;
-      }
-    }
-  } else if (btn === "btn2") {
+  if (btn === "btn2") {
     // Up
     if (queueIndex > 0) {
       queueIndex--;

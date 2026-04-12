@@ -33,8 +33,6 @@ def reset_state():
         "http_session": None,
         "active_player_id": "",
         "active_queue_id": "",
-        "current_track": None,
-        "shuffle_enabled": False,
         "ma_task": None,
     })
     server.clients.clear()
@@ -158,29 +156,6 @@ async def test_ws_next_previous_commands(client):
 
         ma.player_queues.next.assert_called_once_with("test-queue")
         ma.player_queues.previous.assert_called_once_with("test-queue")
-
-
-async def test_ws_shuffle_command(client):
-    """shuffle command toggles shuffle state."""
-    ma = MagicMock()
-    ma.player_queues = MagicMock()
-    ma.player_queues.shuffle = AsyncMock()
-    ma.players = []
-
-    server.rt["ma_client"] = ma
-    server.rt["ma_connected"] = True
-    server.rt["active_queue_id"] = "test-queue"
-    server.rt["shuffle_enabled"] = False
-
-    async with client.ws_connect("/ws") as ws:
-        await ws.receive_json()
-
-        await ws.send_json({"type": "command", "action": "shuffle"})
-
-        import asyncio
-        await asyncio.sleep(0.05)
-
-        ma.player_queues.shuffle.assert_called_once_with("test-queue", True)
 
 
 async def test_ws_play_album_command(client):

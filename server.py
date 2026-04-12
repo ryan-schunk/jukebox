@@ -25,8 +25,6 @@ rt: dict = {
     "http_session": None,
     "active_player_id": "",
     "active_queue_id": "",
-    "current_track": None,
-    "shuffle_enabled": False,
     "ma_task": None,
 }
 
@@ -125,19 +123,14 @@ async def handle_command(ws: web.WebSocketResponse, data: dict):
             await ma.player_queues.next(queue_id)
         elif action == "previous":
             await ma.player_queues.previous(queue_id)
-        elif action == "favorite":
-            await handle_favorite()
-        elif action == "shuffle":
-            await handle_shuffle(queue_id)
         elif action == "play_album":
-            album_id = data.get("album_id")
-            if album_id:
-                uri = f"library://album/{album_id}"
+            uri = data.get("uri")
+            if not uri:
+                album_id = data.get("album_id")
+                if album_id:
+                    uri = f"library://album/{album_id}"
+            if uri:
                 await ma.player_queues.play_media(queue_id, media=[uri], option="replace")
-        elif action == "remove_queue_item":
-            item_id = data.get("item_id")
-            if item_id:
-                await ma.player_queues.delete_item(queue_id, item_id)
         elif action == "get_albums":
             offset = data.get("offset", 0)
             limit = data.get("limit", 50)
@@ -153,11 +146,57 @@ async def handle_command(ws: web.WebSocketResponse, data: dict):
                     image_url = f"/image?{urlencode({'path': path, 'size': '300', 'fmt': 'jpeg'})}"
                 album_list.append({
                     "id": str(a.item_id) if hasattr(a, "item_id") else str(a.uri),
+                    "uri": getattr(a, "uri", ""),
                     "name": a.name,
                     "artist": a.artists[0].name if hasattr(a, "artists") and a.artists else "Unknown Artist",
                     "image_url": image_url,
                 })
             await ws.send_json({"type": "albums", "data": album_list, "offset": offset})
+        elif action == "get_artists":
+            offset = data.get("offset", 0)
+            limit = data.get("limit", 50)
+            artists = await ma.music.get_library_artists(
+                limit=limit, offset=offset, order_by="sort_name", album_artists_only=True
+            )
+            artist_list = []
+            for a in artists.items if hasattr(artists, "items") else artists:
+                image_url = ""
+                if hasattr(a, "image") and a.image:
+                    image_url = f"/image?{urlencode({'path': a.image.path, 'size': '200', 'fmt': 'jpeg'})}" if hasattr(a.image, "path") else ""
+                elif hasattr(a, "metadata") and hasattr(a.metadata, "images") and a.metadata.images:
+                    img = a.metadata.images[0]
+                    path = img.path if hasattr(img, "path") else str(img)
+                    image_url = f"/image?{urlencode({'path': path, 'size': '200', 'fmt': 'jpeg'})}"
+                artist_list.append({
+                    "id": str(a.item_id),
+                    "provider": a.provider,
+                    "name": a.name,
+                    "image_url": image_url,
+                })
+            await ws.send_json({"type": "artists", "data": artist_list, "offset": offset})
+        elif action == "get_artist_albums":
+            artist_id = data.get("artist_id")
+            provider = data.get("provider")
+            if not artist_id or not provider:
+                return
+            albums = await ma.music.get_artist_albums(artist_id, provider)
+            album_list = []
+            for a in albums.items if hasattr(albums, "items") else albums:
+                image_url = ""
+                if hasattr(a, "image") and a.image:
+                    image_url = f"/image?{urlencode({'path': a.image.path, 'size': '300', 'fmt': 'jpeg'})}" if hasattr(a.image, "path") else ""
+                elif hasattr(a, "metadata") and hasattr(a.metadata, "images") and a.metadata.images:
+                    img = a.metadata.images[0]
+                    path = img.path if hasattr(img, "path") else str(img)
+                    image_url = f"/image?{urlencode({'path': path, 'size': '300', 'fmt': 'jpeg'})}"
+                album_list.append({
+                    "id": str(a.item_id),
+                    "uri": getattr(a, "uri", ""),
+                    "name": a.name,
+                    "artist": a.artists[0].name if hasattr(a, "artists") and a.artists else "Unknown Artist",
+                    "image_url": image_url,
+                })
+            await ws.send_json({"type": "artist_albums", "data": album_list})
         elif action == "get_queue":
             items = await ma.player_queues.get_queue_items(queue_id, limit=100, offset=0)
             queue_list = []
@@ -180,31 +219,6 @@ async def handle_command(ws: web.WebSocketResponse, data: dict):
         await ws.send_json({"type": "error", "message": str(e)})
 
 
-async def handle_favorite():
-    """Toggle favorite for the currently playing track."""
-    ma = rt["ma_client"]
-    current = rt.get("current_track")
-    if not current:
-        return
-    try:
-        if current.get("favorite"):
-            await ma.music.remove_item_from_favorites("track", current["item_id"])
-        else:
-            await ma.music.add_item_to_favorites(current["raw_item"])
-    except Exception:
-        log.exception("Error toggling favorite")
-
-
-async def handle_shuffle(queue_id: str):
-    """Toggle shuffle for the active queue."""
-    ma = rt["ma_client"]
-    current_shuffle = rt.get("shuffle_enabled", False)
-    try:
-        await ma.player_queues.shuffle(queue_id, not current_shuffle)
-    except Exception:
-        log.exception("Error toggling shuffle")
-
-
 # --- Music Assistant connection ---
 
 async def connect_to_ma():
@@ -212,8 +226,6 @@ async def connect_to_ma():
     from music_assistant_client import MusicAssistantClient
 
     rt["ma_connected"] = False
-    rt["current_track"] = None
-    rt["shuffle_enabled"] = False
 
     try:
         session = aiohttp.ClientSession()
@@ -347,20 +359,26 @@ async def push_full_state(ws_target=None):
         state = {
             "connected": True,
             "playing": False,
-            "shuffle": False,
             "track": None,
             "elapsed": 0,
             "duration": 0,
+            "has_next": False,
+            "has_previous": False,
         }
 
         if player:
             state["playing"] = str(getattr(player, "playback_state", "")).lower() == "playing"
 
         if queue:
-            state["shuffle"] = getattr(queue, "shuffle_enabled", False)
-            rt["shuffle_enabled"] = state["shuffle"]
             state["elapsed"] = getattr(queue, "elapsed_time", 0) or 0
             state["duration"] = getattr(queue, "duration", 0) or 0
+
+            items_count = getattr(queue, "items", 0) or 0
+            current_index = getattr(queue, "current_index", None)
+            if current_index is None:
+                current_index = 0
+            state["has_next"] = items_count > current_index + 1
+            state["has_previous"] = current_index > 0
 
             current_item = getattr(queue, "current_item", None)
             if current_item:
@@ -373,21 +391,11 @@ async def push_full_state(ws_target=None):
                     path = img.path if hasattr(img, "path") else str(img)
                     image_url = f"/image?{urlencode({'path': path, 'size': '600', 'fmt': 'jpeg'})}"
 
-                item_id = track.item_id if hasattr(track, "item_id") else ""
-                favorite = getattr(track, "favorite", False)
-
                 state["track"] = {
                     "title": track.name if hasattr(track, "name") else "Unknown",
                     "artist": track.artists[0].name if hasattr(track, "artists") and track.artists else "Unknown Artist",
                     "album": track.album.name if hasattr(track, "album") and track.album else "",
                     "image_url": image_url,
-                    "favorite": favorite,
-                    "item_id": str(item_id),
-                }
-                rt["current_track"] = {
-                    "item_id": str(item_id),
-                    "favorite": favorite,
-                    "raw_item": track,
                 }
 
         if ws_target:

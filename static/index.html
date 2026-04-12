@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jukebox</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- Disconnected overlay -->
+  <div id="disconnected" class="overlay hidden">
+    <div class="overlay-content">
+      <div class="spinner"></div>
+      <p>Connecting to Music Assistant...</p>
+    </div>
+  </div>
+
+  <main id="app">
+    <!-- NOW PLAYING -->
+    <section id="now-playing" class="screen active">
+      <div class="np-art-container">
+        <img id="np-art" src="" alt="Album Art" class="np-art">
+        <div id="np-placeholder" class="np-placeholder">Nothing Playing</div>
+      </div>
+      <div class="np-info">
+        <div id="np-title" class="np-title"></div>
+        <div id="np-artist" class="np-artist"></div>
+      </div>
+      <div class="np-progress">
+        <div class="progress-bar">
+          <div id="progress-fill" class="progress-fill"></div>
+        </div>
+        <div class="progress-time">
+          <span id="elapsed">0:00</span>
+          <span id="duration">0:00</span>
+        </div>
+      </div>
+      <div class="np-indicators">
+        <span id="shuffle-indicator" class="indicator hidden">SHUFFLE</span>
+        <span id="favorite-indicator" class="indicator hidden">&hearts;</span>
+      </div>
+    </section>
+
+    <!-- BROWSE -->
+    <section id="browse" class="screen">
+      <h2 class="screen-title">Albums</h2>
+      <div id="album-list" class="item-list">
+        <div id="albums-empty" class="empty-message hidden">No albums found</div>
+      </div>
+    </section>
+
+    <!-- QUEUE -->
+    <section id="queue" class="screen">
+      <h2 class="screen-title">Queue</h2>
+      <div id="queue-list" class="item-list">
+        <div id="queue-empty" class="empty-message hidden">Queue empty</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Button bar -->
+  <nav id="button-bar">
+    <div class="btn-label" id="btn1-label">Play/Pause</div>
+    <div class="btn-label" id="btn2-label">Previous</div>
+    <div class="btn-label" id="btn3-label">Next</div>
+    <div class="btn-label" id="btn4-label">Favorite</div>
+    <div class="btn-label" id="btn5-label">Shuffle</div>
+    <div class="btn-label" id="btn6-label">Next Screen</div>
+  </nav>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+[project]
+name = "jukebox"
+version = "0.1.0"
+description = "Lightweight jukebox controller for Music Assistant"
+requires-python = ">=3.11"
+dependencies = [
+    "aiohttp>=3.9,<4",
+    "music-assistant-client>=1.0,<2",
+]
+
+[project.scripts]
+jukebox = "server:main"

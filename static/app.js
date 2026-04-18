@@ -1,5 +1,11 @@
 // === Key Bindings (R12) ===
+// Physical buttons wired to arrow keys: Right = select/play, Up/Down = navigate, Left = back/next-screen.
+// Number keys retained as a desktop fallback.
 const KEY_MAP = {
+  ArrowRight: "btn1",
+  ArrowUp: "btn2",
+  ArrowDown: "btn3",
+  ArrowLeft: "btn4",
   "1": "btn1",
   "2": "btn2",
   "3": "btn3",

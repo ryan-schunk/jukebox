@@ -294,47 +294,76 @@ const GAMEPAD_BUTTON_MAP = {
 
 let gamepadPolling = false;
 let prevHatBtn = null;
+let prevHatRaw = null;
+let loggedNoGamepad = false;
 const prevButtonState = {};
+const GAMEPAD_DEBUG = true; // set false once mappings are confirmed
 
 function pollGamepad() {
   const gp = navigator.getGamepads()[0];
-  if (gp) {
-    // POV-hat via axis
-    const hat = gp.axes[GAMEPAD_HAT_AXIS];
-    let hatBtn = null;
-    if (hat !== undefined) {
-      for (const d of GAMEPAD_HAT_DIRS) {
-        if (Math.abs(hat - d.value) < GAMEPAD_HAT_TOLERANCE) {
-          hatBtn = d.btn;
-          break;
-        }
-      }
+  if (!gp) {
+    if (GAMEPAD_DEBUG && !loggedNoGamepad) {
+      console.log("[gamepad] poll running, but no gamepad at index 0 yet (press a button once to wake it up)");
+      loggedNoGamepad = true;
     }
-    if (hatBtn && hatBtn !== prevHatBtn) {
-      pressButton(hatBtn);
-    }
-    prevHatBtn = hatBtn;
+    requestAnimationFrame(pollGamepad);
+    return;
+  }
+  if (loggedNoGamepad) {
+    console.log(`[gamepad] acquired: ${gp.id}`);
+    loggedNoGamepad = false;
+  }
 
-    // Face-button edges
-    for (const idx in GAMEPAD_BUTTON_MAP) {
-      const pressed = !!(gp.buttons[idx] && gp.buttons[idx].pressed);
-      if (pressed && !prevButtonState[idx]) {
-        pressButton(GAMEPAD_BUTTON_MAP[idx]);
+  // POV-hat via axis
+  const hat = gp.axes[GAMEPAD_HAT_AXIS];
+  if (GAMEPAD_DEBUG && hat !== undefined && Math.abs((prevHatRaw ?? hat) - hat) > 0.01) {
+    console.log(`[gamepad] axis${GAMEPAD_HAT_AXIS}: ${prevHatRaw?.toFixed(4)} -> ${hat.toFixed(4)}`);
+  }
+  prevHatRaw = hat;
+
+  let hatBtn = null;
+  if (hat !== undefined) {
+    for (const d of GAMEPAD_HAT_DIRS) {
+      if (Math.abs(hat - d.value) < GAMEPAD_HAT_TOLERANCE) {
+        hatBtn = d.btn;
+        break;
       }
-      prevButtonState[idx] = pressed;
     }
   }
+  if (hatBtn !== prevHatBtn) {
+    if (GAMEPAD_DEBUG) console.log(`[gamepad] hat decode: ${prevHatBtn} -> ${hatBtn} (axis=${hat?.toFixed(4)})`);
+    if (hatBtn) {
+      if (GAMEPAD_DEBUG) console.log(`[gamepad] pressButton(${hatBtn})`);
+      pressButton(hatBtn);
+    }
+  }
+  prevHatBtn = hatBtn;
+
+  // Face-button edges
+  for (const idx in GAMEPAD_BUTTON_MAP) {
+    const pressed = !!(gp.buttons[idx] && gp.buttons[idx].pressed);
+    if (pressed !== !!prevButtonState[idx]) {
+      if (GAMEPAD_DEBUG) console.log(`[gamepad] button${idx}: ${!!prevButtonState[idx]} -> ${pressed}`);
+      if (pressed) {
+        if (GAMEPAD_DEBUG) console.log(`[gamepad] pressButton(${GAMEPAD_BUTTON_MAP[idx]})`);
+        pressButton(GAMEPAD_BUTTON_MAP[idx]);
+      }
+    }
+    prevButtonState[idx] = pressed;
+  }
+
   requestAnimationFrame(pollGamepad);
 }
 
 function startGamepadPolling() {
   if (gamepadPolling) return;
   gamepadPolling = true;
+  if (GAMEPAD_DEBUG) console.log("[gamepad] polling started");
   requestAnimationFrame(pollGamepad);
 }
 
 window.addEventListener("gamepadconnected", (e) => {
-  console.log(`Gamepad connected: ${e.gamepad.id} (${e.gamepad.buttons.length} buttons, ${e.gamepad.axes.length} axes)`);
+  console.log(`[gamepad] connected: ${e.gamepad.id} (${e.gamepad.buttons.length} buttons, ${e.gamepad.axes.length} axes)`);
   startGamepadPolling();
 });
 

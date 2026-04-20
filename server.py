@@ -308,7 +308,14 @@ async def on_ma_event(event):
     try:
         event_type = event.event if hasattr(event, "event") else str(event)
 
-        if event_type in ("player_updated", "queue_updated", "queue_time_updated"):
+        if event_type in ("player_added", "player_removed", "player_updated", "queue_updated", "queue_time_updated"):
+            ma = rt.get("ma_client")
+            if ma:
+                active_id = rt.get("active_player_id", "")
+                current_ids = {p.player_id for p in ma.players}
+                if not active_id or active_id not in current_ids:
+                    log.info("Active player %r missing; rediscovering", active_id)
+                    await discover_player()
             await push_full_state()
         else:
             log.debug("Unhandled event type: %s", event_type)

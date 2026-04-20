@@ -273,6 +273,75 @@ document.addEventListener("keydown", (e) => {
   pressButton(btn);
 });
 
+// === Gamepad Support ===
+// CY-2201 board enumerates as a DirectInput gamepad. D-pad terminals (AL/AR/AU/AD)
+// come through as a POV-hat on axis 9. Face buttons also mapped as a fallback.
+const GAMEPAD_HAT_AXIS = 9;
+const GAMEPAD_HAT_DIRS = [
+  { value: -1.0,   btn: "btn2" }, // Up    -> AU
+  { value: -0.428, btn: "btn1" }, // Right -> AR
+  { value:  0.143, btn: "btn3" }, // Down  -> AD
+  { value:  0.714, btn: "btn4" }, // Left  -> AL
+];
+const GAMEPAD_HAT_TOLERANCE = 0.1;
+// Face-button fallback if any are wired directly (A/B/X/Y -> btn1..btn4)
+const GAMEPAD_BUTTON_MAP = {
+  0: "btn1", // A
+  1: "btn2", // B
+  2: "btn3", // X
+  3: "btn4", // Y
+};
+
+let gamepadPolling = false;
+let prevHatBtn = null;
+const prevButtonState = {};
+
+function pollGamepad() {
+  const gp = navigator.getGamepads()[0];
+  if (gp) {
+    // POV-hat via axis
+    const hat = gp.axes[GAMEPAD_HAT_AXIS];
+    let hatBtn = null;
+    if (hat !== undefined) {
+      for (const d of GAMEPAD_HAT_DIRS) {
+        if (Math.abs(hat - d.value) < GAMEPAD_HAT_TOLERANCE) {
+          hatBtn = d.btn;
+          break;
+        }
+      }
+    }
+    if (hatBtn && hatBtn !== prevHatBtn) {
+      pressButton(hatBtn);
+    }
+    prevHatBtn = hatBtn;
+
+    // Face-button edges
+    for (const idx in GAMEPAD_BUTTON_MAP) {
+      const pressed = !!(gp.buttons[idx] && gp.buttons[idx].pressed);
+      if (pressed && !prevButtonState[idx]) {
+        pressButton(GAMEPAD_BUTTON_MAP[idx]);
+      }
+      prevButtonState[idx] = pressed;
+    }
+  }
+  requestAnimationFrame(pollGamepad);
+}
+
+function startGamepadPolling() {
+  if (gamepadPolling) return;
+  gamepadPolling = true;
+  requestAnimationFrame(pollGamepad);
+}
+
+window.addEventListener("gamepadconnected", (e) => {
+  console.log(`Gamepad connected: ${e.gamepad.id} (${e.gamepad.buttons.length} buttons, ${e.gamepad.axes.length} axes)`);
+  startGamepadPolling();
+});
+
+// Some browsers don't fire gamepadconnected if the pad was already plugged in
+// on page load — kick off polling anyway and it'll pick up a pad if present.
+startGamepadPolling();
+
 for (let i = 1; i <= 4; i++) {
   document.getElementById(`btn${i}-label`).addEventListener("click", () => {
     pressButton(`btn${i}`);

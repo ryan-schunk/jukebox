@@ -13,24 +13,23 @@ const KEY_MAP = {
 };
 
 // === Button labels per screen ===
+// btn4 is set dynamically in updateButtonLabels() for non-drill screens
+// (shows the name of the screen it will cycle to).
 const SCREEN_LABELS = {
   "now-playing": {
     btn1: "Play/Pause",
     btn2: "Previous",
     btn3: "Next",
-    btn4: "Next Screen",
   },
   browse: {
     btn1: "Select",
     btn2: "Up",
     btn3: "Down",
-    btn4: "Next Screen",
   },
   artists: {
     btn1: "Select",
     btn2: "Up",
     btn3: "Down",
-    btn4: "Next Screen",
   },
   "artist-albums": {
     btn1: "Select",
@@ -42,8 +41,14 @@ const SCREEN_LABELS = {
     btn1: "",
     btn2: "Up",
     btn3: "Down",
-    btn4: "Next Screen",
   },
+};
+
+const SCREEN_DISPLAY_NAMES = {
+  "now-playing": "Now Playing",
+  browse: "Albums",
+  artists: "Artists",
+  queue: "Queue",
 };
 
 // === State ===
@@ -223,9 +228,15 @@ function updateButtonLabels() {
   const labels = SCREEN_LABELS[screen];
   for (let i = 1; i <= 4; i++) {
     const el = document.getElementById(`btn${i}-label`);
-    el.textContent = labels[`btn${i}`];
+    el.textContent = labels[`btn${i}`] ?? "";
     el.setAttribute("data-key", i);
     el.classList.remove("disabled");
+  }
+
+  // btn4: "Back" on drill screens, otherwise the name of the next screen
+  if (!labels.btn4) {
+    const next = SCREENS[(currentScreen + 1) % SCREENS.length];
+    document.getElementById("btn4-label").textContent = SCREEN_DISPLAY_NAMES[next];
   }
 
   if (screen === "now-playing") {

@@ -315,8 +315,8 @@ html, body {
 
 #btn1-label::before { background: #ef4444; }               /* red */
 #btn2-label::before { background: #ffffff; }               /* white */
-#btn3-label::before { background: #3b82f6; }               /* blue */
-#btn4-label::before { background: #22c55e; }               /* green */
+#btn3-label::before { background: #a855f7; }               /* purple */
+#btn4-label::before { background: #3b82f6; }               /* blue */
 
 /* === Utilities === */
 .hidden {

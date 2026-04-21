@@ -297,6 +297,8 @@ let prevHatBtn = null;
 let prevHatRaw = null;
 let loggedNoGamepad = false;
 const prevButtonState = {};
+const prevAxisSnapshot = {};
+const prevButtonSnapshot = {};
 const GAMEPAD_DEBUG = true; // set false once mappings are confirmed
 
 function pollGamepad() {
@@ -312,6 +314,28 @@ function pollGamepad() {
   if (loggedNoGamepad) {
     console.log(`[gamepad] acquired: ${gp.id}`);
     loggedNoGamepad = false;
+  }
+
+  // Discovery logging: report any axis/button change so we can identify
+  // the D-pad mapping on this platform.
+  if (GAMEPAD_DEBUG) {
+    for (let i = 0; i < gp.axes.length; i++) {
+      const v = gp.axes[i];
+      const prev = prevAxisSnapshot[i];
+      if (prev === undefined || Math.abs(prev - v) > 0.05) {
+        if (prev !== undefined) {
+          console.log(`[gamepad] axis${i}: ${prev.toFixed(4)} -> ${v.toFixed(4)}`);
+        }
+        prevAxisSnapshot[i] = v;
+      }
+    }
+    for (let i = 0; i < gp.buttons.length; i++) {
+      const pressed = !!(gp.buttons[i] && gp.buttons[i].pressed);
+      if (pressed !== !!prevButtonSnapshot[i]) {
+        console.log(`[gamepad] button${i}: ${!!prevButtonSnapshot[i]} -> ${pressed}`);
+        prevButtonSnapshot[i] = pressed;
+      }
+    }
   }
 
   // POV-hat via axis

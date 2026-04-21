@@ -275,7 +275,8 @@ document.addEventListener("keydown", (e) => {
 
 // === Gamepad Support ===
 // CY-2201 board enumerates as a DirectInput gamepad. D-pad terminals (AL/AR/AU/AD)
-// come through as a POV-hat on axis 9. Face buttons also mapped as a fallback.
+// come through differently per platform — Windows/Chrome uses a POV-hat on axis 9,
+// Linux/Chromium uses the first stick on axes 0/1. We watch both.
 const GAMEPAD_HAT_AXIS = 9;
 const GAMEPAD_HAT_DIRS = [
   { value: -1.0,   btn: "btn2" }, // Up    -> AU
@@ -284,6 +285,12 @@ const GAMEPAD_HAT_DIRS = [
   { value:  0.714, btn: "btn4" }, // Left  -> AL
 ];
 const GAMEPAD_HAT_TOLERANCE = 0.1;
+
+// Stick-style D-pad (axes 0=X, 1=Y; +1/-1 at cardinals)
+const GAMEPAD_STICK_X_AXIS = 0;
+const GAMEPAD_STICK_Y_AXIS = 1;
+const GAMEPAD_STICK_THRESHOLD = 0.5;
+
 // Face-button fallback if any are wired directly (A/B/X/Y -> btn1..btn4)
 const GAMEPAD_BUTTON_MAP = {
   0: "btn1", // A
@@ -295,6 +302,7 @@ const GAMEPAD_BUTTON_MAP = {
 let gamepadPolling = false;
 let prevHatBtn = null;
 let prevHatRaw = null;
+let prevStickBtn = null;
 let loggedNoGamepad = false;
 const prevButtonState = {};
 const prevAxisSnapshot = {};
@@ -362,6 +370,23 @@ function pollGamepad() {
     }
   }
   prevHatBtn = hatBtn;
+
+  // Stick-style D-pad (axes 0/1)
+  const sx = gp.axes[GAMEPAD_STICK_X_AXIS] ?? 0;
+  const sy = gp.axes[GAMEPAD_STICK_Y_AXIS] ?? 0;
+  let stickBtn = null;
+  if (sx >  GAMEPAD_STICK_THRESHOLD)      stickBtn = "btn1"; // Right -> AR
+  else if (sx < -GAMEPAD_STICK_THRESHOLD) stickBtn = "btn4"; // Left  -> AL
+  else if (sy < -GAMEPAD_STICK_THRESHOLD) stickBtn = "btn2"; // Up    -> AU
+  else if (sy >  GAMEPAD_STICK_THRESHOLD) stickBtn = "btn3"; // Down  -> AD
+  if (stickBtn !== prevStickBtn) {
+    if (GAMEPAD_DEBUG) console.log(`[gamepad] stick decode: ${prevStickBtn} -> ${stickBtn} (x=${sx.toFixed(2)}, y=${sy.toFixed(2)})`);
+    if (stickBtn) {
+      if (GAMEPAD_DEBUG) console.log(`[gamepad] pressButton(${stickBtn})`);
+      pressButton(stickBtn);
+    }
+  }
+  prevStickBtn = stickBtn;
 
   // Face-button edges
   for (const idx in GAMEPAD_BUTTON_MAP) {

@@ -38,26 +38,66 @@
     </section>
 
     <!-- BROWSE -->
-    <section id="browse" class="screen">
-      <h2 class="screen-title">Albums</h2>
-      <div id="album-list" class="item-list">
-        <div id="albums-empty" class="empty-message hidden">No albums found</div>
+    <section id="browse" class="screen hero-screen">
+      <div class="backdrop" id="browse-backdrop"></div>
+      <div class="hero-stage">
+        <div class="peek peek-prev empty" id="browse-peek-prev">
+          <img class="peek-art" alt="">
+        </div>
+        <div class="hero-item">
+          <img class="hero-art" id="browse-hero-art" alt="">
+          <div class="hero-empty" id="browse-empty">No albums found</div>
+        </div>
+        <div class="peek peek-next empty" id="browse-peek-next">
+          <img class="peek-art" alt="">
+        </div>
+      </div>
+      <div class="hero-meta">
+        <div class="hero-title" id="browse-title"></div>
+        <div class="hero-subtitle" id="browse-subtitle"></div>
       </div>
     </section>
 
     <!-- ARTISTS -->
-    <section id="artists" class="screen">
-      <h2 class="screen-title">Artists</h2>
-      <div id="artist-list" class="item-list">
-        <div id="artists-empty" class="empty-message hidden">No artists found</div>
+    <section id="artists" class="screen hero-screen">
+      <div class="backdrop" id="artists-backdrop"></div>
+      <div class="hero-stage">
+        <div class="peek peek-prev empty" id="artists-peek-prev">
+          <img class="peek-art" alt="">
+        </div>
+        <div class="hero-item">
+          <img class="hero-art" id="artists-hero-art" alt="">
+          <div class="hero-empty" id="artists-empty">No artists found</div>
+        </div>
+        <div class="peek peek-next empty" id="artists-peek-next">
+          <img class="peek-art" alt="">
+        </div>
+      </div>
+      <div class="hero-meta">
+        <div class="hero-title" id="artists-title"></div>
+        <div class="hero-subtitle" id="artists-subtitle"></div>
       </div>
     </section>
 
     <!-- ARTIST ALBUMS (drill-in) -->
-    <section id="artist-albums" class="screen">
-      <h2 class="screen-title" id="artist-albums-title">Albums</h2>
-      <div id="artist-album-list" class="item-list">
-        <div id="artist-albums-empty" class="empty-message hidden">No albums found</div>
+    <section id="artist-albums" class="screen hero-screen">
+      <div class="backdrop" id="artist-albums-backdrop"></div>
+      <div class="hero-context" id="artist-albums-title"></div>
+      <div class="hero-stage">
+        <div class="peek peek-prev empty" id="artist-albums-peek-prev">
+          <img class="peek-art" alt="">
+        </div>
+        <div class="hero-item">
+          <img class="hero-art" id="artist-albums-hero-art" alt="">
+          <div class="hero-empty" id="artist-albums-empty">No albums found</div>
+        </div>
+        <div class="peek peek-next empty" id="artist-albums-peek-next">
+          <img class="peek-art" alt="">
+        </div>
+      </div>
+      <div class="hero-meta">
+        <div class="hero-title" id="artist-albums-hero-title"></div>
+        <div class="hero-subtitle" id="artist-albums-hero-subtitle"></div>
       </div>
     </section>
 

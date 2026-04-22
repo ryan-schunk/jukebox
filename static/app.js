@@ -23,18 +23,18 @@ const SCREEN_LABELS = {
   },
   browse: {
     btn1: "Select",
-    btn2: "Up",
-    btn3: "Down",
+    btn2: "Previous",
+    btn3: "Next",
   },
   artists: {
     btn1: "Select",
-    btn2: "Up",
-    btn3: "Down",
+    btn2: "Previous",
+    btn3: "Next",
   },
   "artist-albums": {
     btn1: "Select",
-    btn2: "Up",
-    btn3: "Down",
+    btn2: "Previous",
+    btn3: "Next",
     btn4: "Back",
   },
   queue: {
@@ -557,45 +557,20 @@ function handleBrowseButton(btn) {
   }
 }
 
-function renderAlbumList() {
-  const container = document.getElementById("album-list");
-  const empty = document.getElementById("albums-empty");
+const BROWSE_HERO = {
+  backdropId: "browse-backdrop",
+  prevPeekId: "browse-peek-prev",
+  heroArtId: "browse-hero-art",
+  nextPeekId: "browse-peek-next",
+  emptyId: "browse-empty",
+  titleId: "browse-title",
+  subtitleId: "browse-subtitle",
+  subtitle: (item) => item.artist || "",
+  title: (item) => item.name || "",
+};
 
-  // Clear existing items (preserve empty message)
-  container.querySelectorAll(".list-item").forEach((el) => el.remove());
-
-  if (albums.length === 0) {
-    empty.classList.remove("hidden");
-    return;
-  }
-  empty.classList.add("hidden");
-
-  albums.forEach((album, i) => {
-    const el = document.createElement("div");
-    el.className = "list-item" + (i === browseIndex ? " selected" : "");
-    el.dataset.index = i;
-    el.innerHTML = `
-      <img class="list-item-art" src="${escapeAttr(album.image_url)}" alt="" loading="lazy">
-      <div class="list-item-info">
-        <div class="list-item-title">${escapeHtml(album.name)}</div>
-        <div class="list-item-artist">${escapeHtml(album.artist)}</div>
-      </div>
-    `;
-    container.appendChild(el);
-  });
-}
-
-function updateBrowseSelection() {
-  const container = document.getElementById("album-list");
-  container.querySelectorAll(".list-item").forEach((el, i) => {
-    el.classList.toggle("selected", i === browseIndex);
-  });
-
-  const selected = container.querySelector(".list-item.selected");
-  if (selected) {
-    selected.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }
-}
+function renderAlbumList() { renderHero(BROWSE_HERO, albums, browseIndex); }
+function updateBrowseSelection() { renderHero(BROWSE_HERO, albums, browseIndex); }
 
 // === Artists ===
 
@@ -626,40 +601,20 @@ function handleArtistsButton(btn) {
   }
 }
 
-function renderArtistList() {
-  const container = document.getElementById("artist-list");
-  const empty = document.getElementById("artists-empty");
+const ARTISTS_HERO = {
+  backdropId: "artists-backdrop",
+  prevPeekId: "artists-peek-prev",
+  heroArtId: "artists-hero-art",
+  nextPeekId: "artists-peek-next",
+  emptyId: "artists-empty",
+  titleId: "artists-title",
+  subtitleId: "artists-subtitle",
+  subtitle: () => "",
+  title: (item) => item.name || "",
+};
 
-  container.querySelectorAll(".list-item").forEach((el) => el.remove());
-
-  if (artists.length === 0) {
-    empty.classList.remove("hidden");
-    return;
-  }
-  empty.classList.add("hidden");
-
-  artists.forEach((artist, i) => {
-    const el = document.createElement("div");
-    el.className = "list-item" + (i === artistIndex ? " selected" : "");
-    el.dataset.index = i;
-    el.innerHTML = `
-      <img class="list-item-art" src="${escapeAttr(artist.image_url)}" alt="" loading="lazy">
-      <div class="list-item-info">
-        <div class="list-item-title">${escapeHtml(artist.name)}</div>
-      </div>
-    `;
-    container.appendChild(el);
-  });
-}
-
-function updateArtistSelection() {
-  const container = document.getElementById("artist-list");
-  container.querySelectorAll(".list-item").forEach((el, i) => {
-    el.classList.toggle("selected", i === artistIndex);
-  });
-  const selected = container.querySelector(".list-item.selected");
-  if (selected) selected.scrollIntoView({ block: "nearest", behavior: "smooth" });
-}
+function renderArtistList() { renderHero(ARTISTS_HERO, artists, artistIndex); }
+function updateArtistSelection() { renderHero(ARTISTS_HERO, artists, artistIndex); }
 
 // === Artist Albums (drill) ===
 
@@ -684,40 +639,75 @@ function handleArtistAlbumsButton(btn) {
   }
 }
 
-function renderArtistAlbumList() {
-  const container = document.getElementById("artist-album-list");
-  const empty = document.getElementById("artist-albums-empty");
+const ARTIST_ALBUMS_HERO = {
+  backdropId: "artist-albums-backdrop",
+  prevPeekId: "artist-albums-peek-prev",
+  heroArtId: "artist-albums-hero-art",
+  nextPeekId: "artist-albums-peek-next",
+  emptyId: "artist-albums-empty",
+  titleId: "artist-albums-hero-title",
+  subtitleId: "artist-albums-hero-subtitle",
+  subtitle: (item) => item.artist || "",
+  title: (item) => item.name || "",
+};
 
-  container.querySelectorAll(".list-item").forEach((el) => el.remove());
+function renderArtistAlbumList() { renderHero(ARTIST_ALBUMS_HERO, artistAlbums, artistAlbumsIndex); }
 
-  if (artistAlbums.length === 0) {
-    empty.classList.remove("hidden");
+function updateArtistAlbumsSelection() { renderHero(ARTIST_ALBUMS_HERO, artistAlbums, artistAlbumsIndex); }
+
+// === Shared hero renderer ===
+
+function renderHero(config, items, index) {
+  const prevEl = document.getElementById(config.prevPeekId);
+  const nextEl = document.getElementById(config.nextPeekId);
+  const heroArt = document.getElementById(config.heroArtId);
+  const heroEmpty = document.getElementById(config.emptyId);
+  const backdrop = document.getElementById(config.backdropId);
+  const titleEl = document.getElementById(config.titleId);
+  const subEl = document.getElementById(config.subtitleId);
+
+  if (!items.length) {
+    heroArt.removeAttribute("src");
+    heroArt.classList.add("hidden");
+    heroEmpty.classList.remove("hidden");
+    backdrop.style.backgroundImage = "";
+    setPeek(prevEl, null);
+    setPeek(nextEl, null);
+    if (titleEl) titleEl.textContent = "";
+    if (subEl) subEl.textContent = "";
     return;
   }
-  empty.classList.add("hidden");
 
-  artistAlbums.forEach((album, i) => {
-    const el = document.createElement("div");
-    el.className = "list-item" + (i === artistAlbumsIndex ? " selected" : "");
-    el.dataset.index = i;
-    el.innerHTML = `
-      <img class="list-item-art" src="${escapeAttr(album.image_url)}" alt="" loading="lazy">
-      <div class="list-item-info">
-        <div class="list-item-title">${escapeHtml(album.name)}</div>
-        <div class="list-item-artist">${escapeHtml(album.artist)}</div>
-      </div>
-    `;
-    container.appendChild(el);
-  });
+  heroEmpty.classList.add("hidden");
+  heroArt.classList.remove("hidden");
+
+  const curr = items[index];
+  heroArt.src = curr.image_url || "";
+  if (titleEl) titleEl.textContent = config.title(curr);
+  if (subEl) subEl.textContent = config.subtitle(curr);
+
+  backdrop.style.backgroundImage = curr.image_url ? `url("${curr.image_url}")` : "";
+
+  setPeek(prevEl, index > 0 ? items[index - 1] : null);
+  setPeek(nextEl, index < items.length - 1 ? items[index + 1] : null);
+
+  // Retrigger pop animation on each selection change
+  const heroItem = heroArt.parentElement;
+  heroItem.classList.remove("flipped");
+  void heroItem.offsetWidth;
+  heroItem.classList.add("flipped");
 }
 
-function updateArtistAlbumsSelection() {
-  const container = document.getElementById("artist-album-list");
-  container.querySelectorAll(".list-item").forEach((el, i) => {
-    el.classList.toggle("selected", i === artistAlbumsIndex);
-  });
-  const selected = container.querySelector(".list-item.selected");
-  if (selected) selected.scrollIntoView({ block: "nearest", behavior: "smooth" });
+function setPeek(el, item) {
+  if (!el) return;
+  const img = el.querySelector(".peek-art");
+  if (item && item.image_url) {
+    el.classList.remove("empty");
+    img.src = item.image_url;
+  } else {
+    el.classList.add("empty");
+    img.removeAttribute("src");
+  }
 }
 
 // === Queue ===

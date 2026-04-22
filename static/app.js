@@ -318,7 +318,7 @@ let loggedNoGamepad = false;
 const prevButtonState = {};
 const prevAxisSnapshot = {};
 const prevButtonSnapshot = {};
-const GAMEPAD_DEBUG = true; // set false once mappings are confirmed
+const GAMEPAD_DEBUG = false; // set true to log axis/button changes for mapping
 
 function pollGamepad() {
   const gp = navigator.getGamepads()[0];

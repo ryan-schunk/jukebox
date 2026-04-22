@@ -5,8 +5,7 @@
 - [ ] Skip the tty1 login prompt on boot — enable getty autologin for the `jukebox` user so `startx` → Chromium kiosk runs hands-free.
 - [ ] Redesign album and artist pages to look like flipping through album covers.
 - [ ] Add profiles, activated by holding a button.
-- [ ] Verify purple/blue button color swap matches the physical panel (btn3=purple, btn4=blue).
-- [ ] Disable gamepad debug logging — flip `GAMEPAD_DEBUG` to `false` in `static/app.js` once the Pi's mapping is confirmed stable.
+- [ ] Timer doesn't change unless the song changes or you hit pause. The total song length isn't updated either.
 
 ## Printing
 
@@ -29,3 +28,4 @@
 - Gamepad API polling on CY-2201 controller (HAT axis 9 on VM, stick axes 0/1 on Pi/Linux Chromium).
 - Kiosk autoboot on Pi Lite via auto-login → `startx` → openbox → Chromium.
 - Dynamic btn4 label showing the target screen name.
+- Gamepad debug logging disabled; on-screen button color circles match the physical red/purple/blue/green panel.

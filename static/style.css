@@ -170,7 +170,7 @@ html, body {
   height: 100%;
   object-fit: cover;
   display: block;
-  animation: np-art-spin 25s linear infinite;
+  animation: np-art-spin 60s linear infinite;
   animation-play-state: paused;
 }
 

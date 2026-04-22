@@ -338,13 +338,23 @@ html, body {
   transition: transform 0.18s ease-out;
 }
 
-.hero-item.flipped {
-  animation: hero-pop 0.22s ease-out;
-}
+.hero-item.flipped-next { animation: hero-slide-in-right 0.28s ease-out; }
+.hero-item.flipped-prev { animation: hero-slide-in-left  0.28s ease-out; }
+.hero-item.flipped      { animation: hero-pop            0.22s ease-out; }
 
 @keyframes hero-pop {
-  0%   { transform: scale(0.955); }
-  100% { transform: scale(1); }
+  0%   { transform: scale(0.96); opacity: 0.7; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+@keyframes hero-slide-in-right {
+  0%   { transform: translateX(60px);  opacity: 0.2; }
+  100% { transform: translateX(0);     opacity: 1; }
+}
+
+@keyframes hero-slide-in-left {
+  0%   { transform: translateX(-60px); opacity: 0.2; }
+  100% { transform: translateX(0);     opacity: 1; }
 }
 
 .hero-art {

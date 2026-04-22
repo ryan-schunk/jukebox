@@ -675,6 +675,7 @@ function renderHero(config, items, index) {
     setPeek(nextEl, null);
     if (titleEl) titleEl.textContent = "";
     if (subEl) subEl.textContent = "";
+    config._prevIdx = undefined;
     return;
   }
 
@@ -691,11 +692,19 @@ function renderHero(config, items, index) {
   setPeek(prevEl, index > 0 ? items[index - 1] : null);
   setPeek(nextEl, index < items.length - 1 ? items[index + 1] : null);
 
-  // Retrigger pop animation on each selection change
+  // Direction-aware slide animation on selection change
+  const prevIdx = config._prevIdx;
+  let animClass = "flipped";
+  if (prevIdx !== undefined) {
+    if (index > prevIdx) animClass = "flipped-next";
+    else if (index < prevIdx) animClass = "flipped-prev";
+  }
+  config._prevIdx = index;
+
   const heroItem = heroArt.parentElement;
-  heroItem.classList.remove("flipped");
+  heroItem.classList.remove("flipped", "flipped-next", "flipped-prev");
   void heroItem.offsetWidth;
-  heroItem.classList.add("flipped");
+  heroItem.classList.add(animClass);
 }
 
 function setPeek(el, item) {

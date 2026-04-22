@@ -122,48 +122,43 @@ html, body {
   z-index: 1;
 }
 
-.np-ring-wrap {
+.np-vinyl-stage {
   position: relative;
-  width: min(68vh, 50vw);
-  height: min(68vh, 50vw);
-  max-width: 100%;
-  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: min(60vh, 36vw);
+  aspect-ratio: auto;
 }
 
-.np-ring {
-  position: absolute;
-  inset: 0;
-  width: 100%;
+.np-vinyl {
   height: 100%;
-  transform: rotate(-90deg);
-  overflow: visible;
-  pointer-events: none;
-}
-
-.np-ring-track {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.18);
-  stroke-width: 1.4;
-}
-
-.np-ring-fill {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 2.2;
-  stroke-linecap: round;
-  stroke-dasharray: 295.3097;
-  stroke-dashoffset: 295.3097;
-  transition: stroke-dashoffset 1s linear;
-  filter: drop-shadow(0 0 6px rgba(226, 163, 8, 0.45));
-}
-
-.np-art-wrap {
-  position: absolute;
-  inset: 6%;
+  aspect-ratio: 1 / 1;
   border-radius: 50%;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+  /* peek out to the right of the sleeve */
+  margin-left: -46%;
+  z-index: 1;
+  transform-origin: 50% 50%;
+}
+
+.np-vinyl.spinning {
+  animation: vinyl-spin 6s linear infinite;
+}
+
+@keyframes vinyl-spin {
+  to { transform: rotate(360deg); }
+}
+
+.np-sleeve {
+  position: relative;
+  height: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.4);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255,255,255,0.06);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  z-index: 2;
 }
 
 .np-art {
@@ -188,6 +183,25 @@ html, body {
 }
 
 .np-placeholder.hidden { display: none; }
+
+.np-progress-bar {
+  width: 100%;
+  max-width: 520px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 16px auto 8px;
+}
+
+.np-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 2px;
+  box-shadow: 0 0 6px rgba(226, 163, 8, 0.5);
+  transition: width 1s linear;
+}
 
 .np-meta {
   position: relative;

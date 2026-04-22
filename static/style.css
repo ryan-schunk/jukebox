@@ -269,11 +269,17 @@ html, body {
 }
 
 .hero-screen.active {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 60px; /* leave room for the button bar */
+  max-width: none;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 16px 20px 20px;
+  padding: 16px 32px 20px;
 }
 
 .backdrop {
@@ -322,7 +328,7 @@ html, body {
 .hero-item {
   flex: 0 1 auto;
   aspect-ratio: 1 / 1;
-  height: min(70vh, 58vw);
+  height: min(65vh, 40vw);
   max-height: 100%;
   border-radius: 10px;
   overflow: hidden;
@@ -367,7 +373,7 @@ html, body {
 .peek {
   flex: 0 1 auto;
   aspect-ratio: 1 / 1;
-  height: min(46vh, 38vw);
+  height: min(45vh, 24vw);
   border-radius: 6px;
   overflow: hidden;
   opacity: 0.4;

@@ -5,7 +5,6 @@
 - [ ] Skip the tty1 login prompt on boot — enable getty autologin for the `jukebox` user so `startx` → Chromium kiosk runs hands-free.
 - [ ] Redesign album and artist pages to look like flipping through album covers.
 - [ ] Add profiles, activated by holding a button.
-- [ ] Timer doesn't change unless the song changes or you hit pause. The total song length isn't updated either.
 
 ## Printing
 
@@ -29,3 +28,4 @@
 - Kiosk autoboot on Pi Lite via auto-login → `startx` → openbox → Chromium.
 - Dynamic btn4 label showing the target screen name.
 - Gamepad debug logging disabled; on-screen button color circles match the physical red/purple/blue/green panel.
+- Track duration pulled from the current queue item so the progress timer advances and shows total length.

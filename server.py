@@ -378,7 +378,6 @@ async def push_full_state(ws_target=None):
 
         if queue:
             state["elapsed"] = getattr(queue, "elapsed_time", 0) or 0
-            state["duration"] = getattr(queue, "duration", 0) or 0
 
             items_count = getattr(queue, "items", 0) or 0
             current_index = getattr(queue, "current_index", None)
@@ -390,6 +389,12 @@ async def push_full_state(ws_target=None):
             current_item = getattr(queue, "current_item", None)
             if current_item:
                 track = getattr(current_item, "media_item", current_item)
+                # Track duration lives on the queue item / media item, not the queue itself.
+                state["duration"] = (
+                    getattr(current_item, "duration", None)
+                    or getattr(track, "duration", None)
+                    or 0
+                )
                 image_url = ""
                 if hasattr(track, "image") and track.image:
                     image_url = f"/image?{urlencode({'path': track.image.path, 'size': '600', 'fmt': 'jpeg'})}" if hasattr(track.image, "path") else ""

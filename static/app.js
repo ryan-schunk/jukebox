@@ -516,8 +516,6 @@ function updateNowPlaying() {
     backdrop.style.backgroundImage = "";
   }
 
-  // Spin the album art slowly while playback is active
-  art.classList.toggle("spinning", !!state.track && !!state.playing);
 
   // Update play/pause label + prev/next disabled state if on Now Playing
   if (activeScreenId() === "now-playing") {

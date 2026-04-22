@@ -454,7 +454,6 @@ function updateNowPlaying() {
   const title = document.getElementById("np-title");
   const artist = document.getElementById("np-artist");
   const backdrop = document.getElementById("np-backdrop");
-  const vinyl = document.getElementById("np-vinyl");
 
   if (state.track) {
     art.src = state.track.image_url || "";
@@ -471,8 +470,6 @@ function updateNowPlaying() {
     backdrop.style.backgroundImage = "";
   }
 
-  if (vinyl) vinyl.classList.toggle("spinning", !!state.playing);
-
   // Update play/pause label + prev/next disabled state if on Now Playing
   if (activeScreenId() === "now-playing") {
     document.getElementById("btn1-label").textContent = state.playing
@@ -485,14 +482,16 @@ function updateNowPlaying() {
   updateProgress();
 }
 
+const NP_RING_CIRCUMFERENCE = 2 * Math.PI * 47; // matches circle r=47 in markup
+
 function setProgressDisplay(elapsed, duration) {
   document.getElementById("elapsed").textContent = formatTime(elapsed);
   document.getElementById("duration").textContent = formatTime(duration);
 
-  const fill = document.getElementById("np-progress-fill");
-  if (fill) {
-    const pct = duration > 0 ? Math.min((elapsed / duration) * 100, 100) : 0;
-    fill.style.width = `${pct}%`;
+  const ring = document.getElementById("np-ring-fill");
+  if (ring) {
+    const ratio = duration > 0 ? Math.min(elapsed / duration, 1) : 0;
+    ring.style.strokeDashoffset = NP_RING_CIRCUMFERENCE * (1 - ratio);
   }
 }
 

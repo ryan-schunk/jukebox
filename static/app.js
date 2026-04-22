@@ -81,6 +81,7 @@ let artistIndex = 0;
 // Artist-albums (drill) state
 let artistAlbums = [];
 let artistAlbumsIndex = 0;
+let artistAlbumsLoaded = false;
 let currentArtist = null;
 
 // Queue state
@@ -160,6 +161,7 @@ function handleMessage(msg) {
   } else if (msg.type === "artist_albums") {
     artistAlbums = msg.data;
     artistAlbumsIndex = 0;
+    artistAlbumsLoaded = true;
     renderArtistAlbumList();
   } else if (msg.type === "error") {
     console.error("Server error:", msg.message);
@@ -205,6 +207,7 @@ function cycleScreen() {
 function enterArtistAlbums(artist) {
   currentArtist = artist;
   artistAlbums = [];
+  artistAlbumsLoaded = false;
   artistAlbumsIndex = 0;
   document.getElementById("artist-albums-title").textContent = artist.name;
   renderArtistAlbumList();
@@ -499,7 +502,7 @@ function updateNowPlaying() {
     placeholder.classList.toggle("hidden", !!state.track.image_url);
     title.textContent = state.track.title;
     artist.textContent = state.track.artist;
-    backdrop.style.backgroundImage = state.track.image_url ? `url("${state.track.image_url}")` : "";
+    backdrop.style.backgroundImage = state.track.image_url ? `url("${backdropUrl(state.track.image_url)}")` : "";
   } else {
     art.classList.add("hidden");
     placeholder.classList.remove("hidden");
@@ -609,6 +612,7 @@ const BROWSE_HERO = {
   subtitleId: "browse-subtitle",
   subtitle: (item) => item.artist || "",
   title: (item) => item.name || "",
+  get loaded() { return albumsLoaded; },
 };
 
 function renderAlbumList() { renderHero(BROWSE_HERO, albums, browseIndex); }
@@ -653,6 +657,7 @@ const ARTISTS_HERO = {
   subtitleId: "artists-subtitle",
   subtitle: () => "",
   title: (item) => item.name || "",
+  get loaded() { return artistsLoaded; },
 };
 
 function renderArtistList() { renderHero(ARTISTS_HERO, artists, artistIndex); }
@@ -691,6 +696,7 @@ const ARTIST_ALBUMS_HERO = {
   subtitleId: "artist-albums-hero-subtitle",
   subtitle: (item) => item.artist || "",
   title: (item) => item.name || "",
+  get loaded() { return artistAlbumsLoaded; },
 };
 
 function renderArtistAlbumList() { renderHero(ARTIST_ALBUMS_HERO, artistAlbums, artistAlbumsIndex); }
@@ -711,7 +717,9 @@ function renderHero(config, items, index) {
   if (!items.length) {
     heroArt.removeAttribute("src");
     heroArt.classList.add("hidden");
-    heroEmpty.classList.remove("hidden");
+    // Only reveal the "No albums/artists found" message once we know the fetch
+    // completed; before that, show nothing so the screen isn't flashing copy.
+    heroEmpty.classList.toggle("hidden", !config.loaded);
     backdrop.style.backgroundImage = "";
     setPeek(prevEl, null);
     setPeek(nextEl, null);
@@ -729,7 +737,7 @@ function renderHero(config, items, index) {
   if (titleEl) titleEl.textContent = config.title(curr);
   if (subEl) subEl.textContent = config.subtitle(curr);
 
-  backdrop.style.backgroundImage = curr.image_url ? `url("${curr.image_url}")` : "";
+  backdrop.style.backgroundImage = curr.image_url ? `url("${backdropUrl(curr.image_url)}")` : "";
 
   setPeek(prevEl, index > 0 ? items[index - 1] : null);
   setPeek(nextEl, index < items.length - 1 ? items[index + 1] : null);
@@ -747,6 +755,13 @@ function renderHero(config, items, index) {
   heroItem.classList.remove("flipped", "flipped-next", "flipped-prev");
   void heroItem.offsetWidth;
   heroItem.classList.add(animClass);
+}
+
+// Serve a tiny image for the blurred backdrop — heavy blur over a 600px cover
+// tanks the Pi 3B+ GPU. Swap size= to a small value (MA's imageproxy honors it).
+function backdropUrl(imageUrl) {
+  if (!imageUrl) return "";
+  return imageUrl.replace(/([?&])size=\d+/, "$1size=80");
 }
 
 function setPeek(el, item) {

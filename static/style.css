@@ -177,6 +177,7 @@ html, body {
 
 .np-art.spinning {
   animation-play-state: running;
+  will-change: transform;
 }
 
 @keyframes np-art-spin {
@@ -350,14 +351,15 @@ html, body {
 
 .backdrop {
   position: absolute;
-  inset: -40px;
+  inset: -20px;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  filter: blur(40px) brightness(0.45) saturate(1.2);
-  transform: scale(1.12);
+  /* A tiny source image + mild blur is far cheaper on weak GPUs (Pi 3B+)
+     than heavy blur over a full-size image. */
+  filter: blur(18px) brightness(0.45) saturate(1.2);
+  transform: scale(1.06);
   z-index: 0;
-  transition: opacity 0.25s ease-out;
   pointer-events: none;
 }
 

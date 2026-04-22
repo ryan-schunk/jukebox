@@ -497,12 +497,17 @@ function updateNowPlaying() {
   const backdrop = document.getElementById("np-backdrop");
 
   if (state.track) {
-    art.src = state.track.image_url || "";
+    const artUrl = nowPlayingArtUrl(state.track.image_url);
+    const bgUrl = backdropUrl(state.track.image_url);
+    // Only rewrite src when the URL actually changes — otherwise every periodic
+    // state push (every few seconds) reloads the img and resets the spin.
+    if (art.getAttribute("src") !== artUrl) art.src = artUrl || "";
     art.classList.toggle("hidden", !state.track.image_url);
     placeholder.classList.toggle("hidden", !!state.track.image_url);
     title.textContent = state.track.title;
     artist.textContent = state.track.artist;
-    backdrop.style.backgroundImage = state.track.image_url ? `url("${backdropUrl(state.track.image_url)}")` : "";
+    const bgDesired = bgUrl ? `url("${bgUrl}")` : "";
+    if (backdrop.style.backgroundImage !== bgDesired) backdrop.style.backgroundImage = bgDesired;
   } else {
     art.classList.add("hidden");
     placeholder.classList.remove("hidden");
@@ -762,6 +767,14 @@ function renderHero(config, items, index) {
 function backdropUrl(imageUrl) {
   if (!imageUrl) return "";
   return imageUrl.replace(/([?&])size=\d+/, "$1size=80");
+}
+
+// The Now Playing art rotates, so the browser re-composites it every animation
+// frame. A 600px source is more data than the VC4 GPU wants to push on a Pi 3B+.
+// Downscale to 400px.
+function nowPlayingArtUrl(imageUrl) {
+  if (!imageUrl) return "";
+  return imageUrl.replace(/([?&])size=\d+/, "$1size=400");
 }
 
 function setPeek(el, item) {

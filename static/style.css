@@ -149,12 +149,11 @@ html, body {
 .np-ring-fill {
   fill: none;
   stroke: var(--accent);
-  stroke-width: 2.2;
+  stroke-width: 2.4;
   stroke-linecap: round;
   stroke-dasharray: 295.3097;
   stroke-dashoffset: 295.3097;
   transition: stroke-dashoffset 1s linear;
-  filter: drop-shadow(0 0 6px rgba(226, 163, 8, 0.45));
 }
 
 .np-art-wrap {
@@ -163,7 +162,7 @@ html, body {
   border-radius: 50%;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.4);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255,255,255,0.06);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
 }
 
 .np-art {
@@ -355,9 +354,9 @@ html, body {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  /* A tiny source image + mild blur is far cheaper on weak GPUs (Pi 3B+)
-     than heavy blur over a full-size image. */
-  filter: blur(18px) brightness(0.45) saturate(1.2);
+  /* Fewer filter passes = fewer shader invocations on VC4.
+     Dropped saturate(); kept brightness() for legibility. */
+  filter: blur(18px) brightness(0.45);
   transform: scale(1.06);
   z-index: 0;
   pointer-events: none;

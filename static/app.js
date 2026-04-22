@@ -453,6 +453,7 @@ function updateNowPlaying() {
   const placeholder = document.getElementById("np-placeholder");
   const title = document.getElementById("np-title");
   const artist = document.getElementById("np-artist");
+  const backdrop = document.getElementById("np-backdrop");
 
   if (state.track) {
     art.src = state.track.image_url || "";
@@ -460,11 +461,13 @@ function updateNowPlaying() {
     placeholder.classList.toggle("hidden", !!state.track.image_url);
     title.textContent = state.track.title;
     artist.textContent = state.track.artist;
+    backdrop.style.backgroundImage = state.track.image_url ? `url("${state.track.image_url}")` : "";
   } else {
     art.classList.add("hidden");
     placeholder.classList.remove("hidden");
     title.textContent = "";
     artist.textContent = "";
+    backdrop.style.backgroundImage = "";
   }
 
   // Update play/pause label + prev/next disabled state if on Now Playing
@@ -479,18 +482,21 @@ function updateNowPlaying() {
   updateProgress();
 }
 
+const NP_RING_CIRCUMFERENCE = 2 * Math.PI * 47; // matches circle r=47 in markup
+
+function setProgressDisplay(elapsed, duration) {
+  document.getElementById("elapsed").textContent = formatTime(elapsed);
+  document.getElementById("duration").textContent = formatTime(duration);
+
+  const ring = document.getElementById("np-ring-fill");
+  if (ring) {
+    const ratio = duration > 0 ? Math.min(elapsed / duration, 1) : 0;
+    ring.style.strokeDashoffset = NP_RING_CIRCUMFERENCE * (1 - ratio);
+  }
+}
+
 function updateProgress() {
-  const fill = document.getElementById("progress-fill");
-  const elapsedEl = document.getElementById("elapsed");
-  const durationEl = document.getElementById("duration");
-
-  const elapsed = state.elapsed || 0;
-  const duration = state.duration || 0;
-
-  const pct = duration > 0 ? (elapsed / duration) * 100 : 0;
-  fill.style.width = `${Math.min(pct, 100)}%`;
-  elapsedEl.textContent = formatTime(elapsed);
-  durationEl.textContent = formatTime(duration);
+  setProgressDisplay(state.elapsed || 0, state.duration || 0);
 }
 
 function startProgressInterpolation() {
@@ -499,13 +505,8 @@ function startProgressInterpolation() {
   if (state.playing && state.duration > 0) {
     progressInterval = setInterval(() => {
       const secondsSinceUpdate = (Date.now() - lastStateTime) / 1000;
-      const interpolated = (state.elapsed || 0) + secondsSinceUpdate;
-      const pct = Math.min((interpolated / state.duration) * 100, 100);
-
-      document.getElementById("progress-fill").style.width = `${pct}%`;
-      document.getElementById("elapsed").textContent = formatTime(
-        Math.min(interpolated, state.duration)
-      );
+      const interpolated = Math.min((state.elapsed || 0) + secondsSinceUpdate, state.duration);
+      setProgressDisplay(interpolated, state.duration);
     }, 1000);
   }
 }

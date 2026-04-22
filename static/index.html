@@ -17,21 +17,26 @@
 
   <main id="app">
     <!-- NOW PLAYING -->
-    <section id="now-playing" class="screen active">
-      <div class="np-art-container">
-        <img id="np-art" src="" alt="Album Art" class="np-art">
-        <div id="np-placeholder" class="np-placeholder">Nothing Playing</div>
+    <section id="now-playing" class="screen np-screen active">
+      <div class="backdrop" id="np-backdrop"></div>
+      <div class="np-hero">
+        <div class="np-ring-wrap">
+          <svg class="np-ring" viewBox="0 0 100 100">
+            <circle class="np-ring-track" cx="50" cy="50" r="47"></circle>
+            <circle class="np-ring-fill" id="np-ring-fill" cx="50" cy="50" r="47"></circle>
+          </svg>
+          <div class="np-art-wrap">
+            <img id="np-art" src="" alt="Album Art" class="np-art">
+            <div id="np-placeholder" class="np-placeholder">Nothing Playing</div>
+          </div>
+        </div>
       </div>
-      <div class="np-info">
+      <div class="np-meta">
         <div id="np-title" class="np-title"></div>
         <div id="np-artist" class="np-artist"></div>
-      </div>
-      <div class="np-progress">
-        <div class="progress-bar">
-          <div id="progress-fill" class="progress-fill"></div>
-        </div>
-        <div class="progress-time">
+        <div class="np-time">
           <span id="elapsed">0:00</span>
+          <span class="np-time-sep">/</span>
           <span id="duration">0:00</span>
         </div>
       </div>

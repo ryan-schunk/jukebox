@@ -171,6 +171,16 @@ html, body {
   height: 100%;
   object-fit: cover;
   display: block;
+  animation: np-art-spin 25s linear infinite;
+  animation-play-state: paused;
+}
+
+.np-art.spinning {
+  animation-play-state: running;
+}
+
+@keyframes np-art-spin {
+  to { transform: rotate(360deg); }
 }
 
 .np-art.hidden { display: none; }

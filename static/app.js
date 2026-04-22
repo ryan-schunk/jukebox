@@ -277,11 +277,52 @@ function pressButton(btn) {
   }
 }
 
+// btn2 (purple) has a long-press action: hold for BTN2_HOLD_MS to hard-refresh the page.
+// A short press fires on release so we can distinguish tap vs hold.
+const BTN2_HOLD_MS = 1000;
+let btn2HoldTimer = null;
+let btn2HoldFired = false;
+
+function handleBtn2Press() {
+  btn2HoldFired = false;
+  if (btn2HoldTimer) clearTimeout(btn2HoldTimer);
+  btn2HoldTimer = setTimeout(() => {
+    btn2HoldFired = true;
+    location.reload();
+  }, BTN2_HOLD_MS);
+}
+
+function handleBtn2Release() {
+  if (btn2HoldTimer) {
+    clearTimeout(btn2HoldTimer);
+    btn2HoldTimer = null;
+  }
+  if (!btn2HoldFired) pressButton("btn2");
+  btn2HoldFired = false;
+}
+
+// Route an edge transition (from one "current active button" to another, null on either side)
+// through the btn2 press/release machinery while firing other buttons immediately.
+function dispatchButtonEdge(next, prev) {
+  if (next === prev) return;
+  if (prev === "btn2") handleBtn2Release();
+  if (next === "btn2") handleBtn2Press();
+  else if (next) pressButton(next);
+}
+
 document.addEventListener("keydown", (e) => {
   const btn = KEY_MAP[e.key];
   if (!btn) return;
   e.preventDefault();
-  pressButton(btn);
+  if (e.repeat) return;
+  if (btn === "btn2") handleBtn2Press();
+  else pressButton(btn);
+});
+
+document.addEventListener("keyup", (e) => {
+  const btn = KEY_MAP[e.key];
+  if (!btn) return;
+  if (btn === "btn2") handleBtn2Release();
 });
 
 // === Gamepad Support ===
@@ -375,10 +416,7 @@ function pollGamepad() {
   }
   if (hatBtn !== prevHatBtn) {
     if (GAMEPAD_DEBUG) console.log(`[gamepad] hat decode: ${prevHatBtn} -> ${hatBtn} (axis=${hat?.toFixed(4)})`);
-    if (hatBtn) {
-      if (GAMEPAD_DEBUG) console.log(`[gamepad] pressButton(${hatBtn})`);
-      pressButton(hatBtn);
-    }
+    dispatchButtonEdge(hatBtn, prevHatBtn);
   }
   prevHatBtn = hatBtn;
 
@@ -392,10 +430,7 @@ function pollGamepad() {
   else if (sy >  GAMEPAD_STICK_THRESHOLD) stickBtn = "btn3"; // Down  -> AD
   if (stickBtn !== prevStickBtn) {
     if (GAMEPAD_DEBUG) console.log(`[gamepad] stick decode: ${prevStickBtn} -> ${stickBtn} (x=${sx.toFixed(2)}, y=${sy.toFixed(2)})`);
-    if (stickBtn) {
-      if (GAMEPAD_DEBUG) console.log(`[gamepad] pressButton(${stickBtn})`);
-      pressButton(stickBtn);
-    }
+    dispatchButtonEdge(stickBtn, prevStickBtn);
   }
   prevStickBtn = stickBtn;
 
@@ -403,10 +438,13 @@ function pollGamepad() {
   for (const idx in GAMEPAD_BUTTON_MAP) {
     const pressed = !!(gp.buttons[idx] && gp.buttons[idx].pressed);
     if (pressed !== !!prevButtonState[idx]) {
-      if (GAMEPAD_DEBUG) console.log(`[gamepad] button${idx}: ${!!prevButtonState[idx]} -> ${pressed}`);
+      const btn = GAMEPAD_BUTTON_MAP[idx];
+      if (GAMEPAD_DEBUG) console.log(`[gamepad] button${idx}(${btn}): ${!!prevButtonState[idx]} -> ${pressed}`);
       if (pressed) {
-        if (GAMEPAD_DEBUG) console.log(`[gamepad] pressButton(${GAMEPAD_BUTTON_MAP[idx]})`);
-        pressButton(GAMEPAD_BUTTON_MAP[idx]);
+        if (btn === "btn2") handleBtn2Press();
+        else pressButton(btn);
+      } else if (btn === "btn2") {
+        handleBtn2Release();
       }
     }
     prevButtonState[idx] = pressed;
@@ -469,6 +507,9 @@ function updateNowPlaying() {
     artist.textContent = "";
     backdrop.style.backgroundImage = "";
   }
+
+  // Spin the album art slowly while playback is active
+  art.classList.toggle("spinning", !!state.track && !!state.playing);
 
   // Update play/pause label + prev/next disabled state if on Now Playing
   if (activeScreenId() === "now-playing") {

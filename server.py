@@ -427,6 +427,20 @@ async def start_ma_background(app: web.Application):
     rt["ma_task"] = asyncio.create_task(connect_to_ma())
 
 
+async def state_endpoint(request: web.Request) -> web.Response:
+    """Plain JSON snapshot of playback state. Consumed by the Pi display-sleep watcher."""
+    ma = rt.get("ma_client")
+    connected = bool(ma and rt.get("ma_connected"))
+    playing = False
+    if connected:
+        player_id = rt.get("active_player_id", "")
+        for p in list(ma.players):
+            if p.player_id == player_id:
+                playing = str(getattr(p, "playback_state", "")).lower() == "playing"
+                break
+    return web.json_response({"connected": connected, "playing": playing})
+
+
 async def cleanup(app: web.Application):
     """Clean up on shutdown."""
     task = rt.get("ma_task")
@@ -448,6 +462,7 @@ def create_app() -> web.Application:
     app.router.add_get("/", index)
     app.router.add_get("/ws", websocket_handler)
     app.router.add_get("/image", image_proxy)
+    app.router.add_get("/state", state_endpoint)
     app.router.add_static("/static/", os.path.join(os.path.dirname(__file__), "static"))
     app.on_startup.append(start_ma_background)
     app.on_cleanup.append(cleanup)

@@ -32,6 +32,7 @@ from pathlib import Path
 STATE_URL = os.environ.get("JUKEBOX_STATE_URL", "http://10.10.10.17:8080/state")
 IDLE_TIMEOUT = int(os.environ.get("JUKEBOX_IDLE_TIMEOUT", "900"))
 POLL_INTERVAL = int(os.environ.get("JUKEBOX_POLL_INTERVAL", "10"))
+VERBOSE = os.environ.get("JUKEBOX_VERBOSE", "0") == "1"
 RESCAN_INTERVAL = 5  # seconds — re-check /dev/input for hot-plugged devices
 
 
@@ -56,8 +57,8 @@ def display_off() -> None:
     xset("dpms", "force", "off")
 
 
-def scan_devices(known: dict[str, int]) -> None:
-    """Open any new /dev/input/event* or /dev/input/js* devices. Mutates `known`."""
+def scan_devices(known: dict[str, int], paths: dict[int, str]) -> None:
+    """Open any new /dev/input/event* or /dev/input/js* devices. Mutates both maps."""
     candidates = sorted(Path("/dev/input").glob("event*")) + sorted(
         Path("/dev/input").glob("js*")
     )
@@ -68,6 +69,7 @@ def scan_devices(known: dict[str, int]) -> None:
         try:
             fd = os.open(key, os.O_RDONLY | os.O_NONBLOCK)
             known[key] = fd
+            paths[fd] = key
             log(f"opened {key}")
         except PermissionError:
             log(f"PERMISSION DENIED reading {key} — is the user in the 'input' group?")
@@ -112,7 +114,8 @@ def main() -> int:
     xset("dpms", "0", "0", "0")
 
     known: dict[str, int] = {}
-    scan_devices(known)
+    paths: dict[int, str] = {}
+    scan_devices(known, paths)
     if not any(fd >= 0 for fd in known.values()):
         log("no readable /dev/input devices — watcher will still run, retrying every 5s")
 
@@ -120,10 +123,12 @@ def main() -> int:
     last_poll = 0.0
     last_rescan = time.monotonic()
     sleeping = False
+    event_counts: dict[str, int] = {}
+    last_verbose_summary = time.monotonic()
 
     log(
         f"watcher up: timeout={IDLE_TIMEOUT}s, poll={POLL_INTERVAL}s, "
-        f"state={STATE_URL}, devices={len(active_fds(known))}"
+        f"state={STATE_URL}, devices={len(active_fds(known))}, verbose={VERBOSE}"
     )
 
     while True:
@@ -139,19 +144,32 @@ def main() -> int:
         if ready:
             # Drain without caring about content; any byte means activity.
             for fd in ready:
-                # Find the path for logging (first time only, to avoid spam)
+                bytes_read = 0
                 try:
                     while True:
                         chunk = os.read(fd, 4096)
                         if not chunk:
                             break
+                        bytes_read += len(chunk)
                 except (BlockingIOError, OSError):
                     pass
+                if VERBOSE:
+                    p = paths.get(fd, f"fd{fd}")
+                    event_counts[p] = event_counts.get(p, 0) + 1
             last_active = now
             if sleeping:
                 log("input activity -> wake")
                 display_on()
                 sleeping = False
+
+        if VERBOSE and now - last_verbose_summary >= 5.0:
+            last_verbose_summary = now
+            if event_counts:
+                summary = ", ".join(f"{p}={c}" for p, c in sorted(event_counts.items()))
+                log(f"events in last 5s: {summary}")
+                event_counts.clear()
+            else:
+                log("events in last 5s: (none)")
 
         if now - last_poll >= POLL_INTERVAL:
             last_poll = now
@@ -165,7 +183,7 @@ def main() -> int:
         if now - last_rescan >= RESCAN_INTERVAL:
             last_rescan = now
             before = len(active_fds(known))
-            scan_devices(known)
+            scan_devices(known, paths)
             after = len(active_fds(known))
             if after > before:
                 log(f"rescan: {before} -> {after} active devices")

@@ -153,7 +153,9 @@ html, body {
   stroke-linecap: round;
   stroke-dasharray: 295.3097;
   stroke-dashoffset: 295.3097;
-  transition: stroke-dashoffset 1s linear;
+  /* No CSS transition — we update the offset once per second in JS, and a 1s
+     linear transition would keep the GPU compositing the ring layer every
+     frame for ~no visual benefit at this update rate. */
 }
 
 .np-art-wrap {
@@ -339,15 +341,22 @@ html, body {
 
 .backdrop {
   position: absolute;
-  inset: -20px;
+  inset: 0;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  /* Fewer filter passes = fewer shader invocations on VC4.
-     Dropped saturate(); kept brightness() for legibility. */
-  filter: blur(18px) brightness(0.45);
-  transform: scale(1.06);
   z-index: 0;
+  pointer-events: none;
+}
+
+/* Darken via an alpha overlay instead of a filter — no per-frame shader work.
+   The 80px source image is already chunky enough to read as "color wash"
+   without needing a blur pass. */
+.backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 10, 22, 0.72);
   pointer-events: none;
 }
 
@@ -394,22 +403,22 @@ html, body {
   transition: transform 0.18s ease-out;
 }
 
-.hero-item.flipped-next { animation: hero-slide-in-right 0.28s ease-out; }
-.hero-item.flipped-prev { animation: hero-slide-in-left  0.28s ease-out; }
-.hero-item.flipped      { animation: hero-pop            0.22s ease-out; }
+.hero-item.flipped-next { animation: hero-slide-in-right 0.14s ease-out; }
+.hero-item.flipped-prev { animation: hero-slide-in-left  0.14s ease-out; }
+.hero-item.flipped      { animation: hero-pop            0.14s ease-out; }
 
 @keyframes hero-pop {
-  0%   { transform: scale(0.96); opacity: 0.7; }
+  0%   { transform: scale(0.97); opacity: 0.75; }
   100% { transform: scale(1);    opacity: 1; }
 }
 
 @keyframes hero-slide-in-right {
-  0%   { transform: translateX(60px);  opacity: 0.2; }
+  0%   { transform: translateX(40px);  opacity: 0.3; }
   100% { transform: translateX(0);     opacity: 1; }
 }
 
 @keyframes hero-slide-in-left {
-  0%   { transform: translateX(-60px); opacity: 0.2; }
+  0%   { transform: translateX(-40px); opacity: 0.3; }
   100% { transform: translateX(0);     opacity: 1; }
 }
 

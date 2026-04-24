@@ -280,19 +280,16 @@ function pressButton(btn) {
   }
 }
 
-// btn2 (purple) has a long-press action: hold for BTN2_HOLD_MS to hard-refresh the page.
-// A short press fires on release so we can distinguish tap vs hold.
+// btn2 (purple): tap fires previous/up immediately like any other button; hold
+// for BTN2_HOLD_MS triggers a page reload. Firing on press (not release) means
+// we can't miss a quick tap if polling is running a bit slow.
 const BTN2_HOLD_MS = 1000;
 let btn2HoldTimer = null;
-let btn2HoldFired = false;
 
 function handleBtn2Press() {
-  btn2HoldFired = false;
+  pressButton("btn2");
   if (btn2HoldTimer) clearTimeout(btn2HoldTimer);
-  btn2HoldTimer = setTimeout(() => {
-    btn2HoldFired = true;
-    location.reload();
-  }, BTN2_HOLD_MS);
+  btn2HoldTimer = setTimeout(() => location.reload(), BTN2_HOLD_MS);
 }
 
 function handleBtn2Release() {
@@ -300,8 +297,6 @@ function handleBtn2Release() {
     clearTimeout(btn2HoldTimer);
     btn2HoldTimer = null;
   }
-  if (!btn2HoldFired) pressButton("btn2");
-  btn2HoldFired = false;
 }
 
 // Route an edge transition (from one "current active button" to another, null on either side)
@@ -371,7 +366,6 @@ function pollGamepad() {
       console.log("[gamepad] poll running, but no gamepad at index 0 yet (press a button once to wake it up)");
       loggedNoGamepad = true;
     }
-    requestAnimationFrame(pollGamepad);
     return;
   }
   if (loggedNoGamepad) {
@@ -452,15 +446,16 @@ function pollGamepad() {
     }
     prevButtonState[idx] = pressed;
   }
-
-  requestAnimationFrame(pollGamepad);
 }
 
 function startGamepadPolling() {
   if (gamepadPolling) return;
   gamepadPolling = true;
   if (GAMEPAD_DEBUG) console.log("[gamepad] polling started");
-  requestAnimationFrame(pollGamepad);
+  // setInterval decouples input sampling from the render loop. rAF throttles
+  // when rendering is busy, which on a Pi 3B+ (blur backdrop, slide-in, etc.)
+  // was enough to miss fast button presses.
+  setInterval(pollGamepad, 33); // ~30 Hz
 }
 
 window.addEventListener("gamepadconnected", (e) => {
@@ -745,6 +740,12 @@ function renderHero(config, items, index) {
   setPeek(prevEl, index > 0 ? items[index - 1] : null);
   setPeek(nextEl, index < items.length - 1 ? items[index + 1] : null);
 
+  // Preload two-ahead and two-behind covers. Without this, pressing Next leaves
+  // the new peek-next slot briefly still painting the previous image (the one
+  // now centered as hero) until the truly-new URL finishes loading.
+  preloadImage(items[index + 2]?.image_url);
+  preloadImage(items[index - 2]?.image_url);
+
   // Direction-aware slide animation on selection change
   const prevIdx = config._prevIdx;
   let animClass = "flipped";
@@ -758,6 +759,15 @@ function renderHero(config, items, index) {
   heroItem.classList.remove("flipped", "flipped-next", "flipped-prev");
   void heroItem.offsetWidth;
   heroItem.classList.add(animClass);
+}
+
+const preloadedImages = new Set();
+function preloadImage(url) {
+  if (!url || preloadedImages.has(url)) return;
+  preloadedImages.add(url);
+  const img = new Image();
+  img.decoding = "async";
+  img.src = url;
 }
 
 // Serve a tiny image for the blurred backdrop — heavy blur over a 600px cover

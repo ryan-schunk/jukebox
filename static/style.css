@@ -339,25 +339,11 @@ html, body {
   padding: 16px 32px 20px;
 }
 
+/* Backdrop removed — hero screens fall back to the app's base dark color.
+   Kept the element in the DOM + the JS paths so it's trivial to re-enable
+   later by giving .backdrop styles again. */
 .backdrop {
-  position: absolute;
-  inset: 0;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  z-index: 0;
-  pointer-events: none;
-}
-
-/* Darken via an alpha overlay instead of a filter — no per-frame shader work.
-   The 80px source image is already chunky enough to read as "color wash"
-   without needing a blur pass. */
-.backdrop::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: rgba(10, 10, 22, 0.72);
-  pointer-events: none;
+  display: none;
 }
 
 .hero-context {

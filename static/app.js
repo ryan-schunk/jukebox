@@ -289,7 +289,12 @@ let btn2HoldTimer = null;
 function handleBtn2Press() {
   pressButton("btn2");
   if (btn2HoldTimer) clearTimeout(btn2HoldTimer);
-  btn2HoldTimer = setTimeout(() => location.reload(), BTN2_HOLD_MS);
+  btn2HoldTimer = setTimeout(() => {
+    // Navigate to the same URL with a cache-busting query param so Chromium
+    // actually re-fetches index.html (and via the no-store headers, every
+    // referenced asset) rather than serving its cached copies.
+    location.replace(`${location.pathname}?_=${Date.now()}`);
+  }, BTN2_HOLD_MS);
 }
 
 function handleBtn2Release() {

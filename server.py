@@ -457,8 +457,21 @@ async def cleanup(app: web.Application):
             pass
 
 
+@web.middleware
+async def no_cache_middleware(request: web.Request, handler):
+    """Force the kiosk browser to revalidate HTML/CSS/JS on every load so that
+    a redeploy or a user-triggered reload always picks up the latest code."""
+    resp = await handler(request)
+    path = request.path
+    if path == "/" or path.startswith("/static/"):
+        resp.headers["Cache-Control"] = "no-store, must-revalidate"
+        resp.headers["Pragma"] = "no-cache"
+        resp.headers["Expires"] = "0"
+    return resp
+
+
 def create_app() -> web.Application:
-    app = web.Application()
+    app = web.Application(middlewares=[no_cache_middleware])
     app.router.add_get("/", index)
     app.router.add_get("/ws", websocket_handler)
     app.router.add_get("/image", image_proxy)

@@ -703,6 +703,19 @@ function updateArtistAlbumsSelection() { renderHero(ARTIST_ALBUMS_HERO, artistAl
 
 // === Shared hero renderer ===
 
+// Debounced backdrop update: during rapid flipping through covers, the
+// backdrop can stay on the previous image until the user pauses, which avoids
+// a flood of image decodes on the Pi 3B+ for screens that will be left almost
+// immediately anyway.
+const BACKDROP_DEBOUNCE_MS = 180;
+function scheduleBackdrop(backdrop, url) {
+  clearTimeout(backdrop._debounceTimer);
+  backdrop._debounceTimer = setTimeout(() => {
+    const desired = url ? `url("${url}")` : "";
+    if (backdrop.style.backgroundImage !== desired) backdrop.style.backgroundImage = desired;
+  }, BACKDROP_DEBOUNCE_MS);
+}
+
 function renderHero(config, items, index) {
   const prevEl = document.getElementById(config.prevPeekId);
   const nextEl = document.getElementById(config.nextPeekId);
@@ -718,7 +731,7 @@ function renderHero(config, items, index) {
     // Only reveal the "No albums/artists found" message once we know the fetch
     // completed; before that, show nothing so the screen isn't flashing copy.
     heroEmpty.classList.toggle("hidden", !config.loaded);
-    backdrop.style.backgroundImage = "";
+    scheduleBackdrop(backdrop, "");
     setPeek(prevEl, null);
     setPeek(nextEl, null);
     if (titleEl) titleEl.textContent = "";
@@ -735,7 +748,7 @@ function renderHero(config, items, index) {
   if (titleEl) titleEl.textContent = config.title(curr);
   if (subEl) subEl.textContent = config.subtitle(curr);
 
-  backdrop.style.backgroundImage = curr.image_url ? `url("${backdropUrl(curr.image_url)}")` : "";
+  scheduleBackdrop(backdrop, curr.image_url ? backdropUrl(curr.image_url) : "");
 
   setPeek(prevEl, index > 0 ? items[index - 1] : null);
   setPeek(nextEl, index < items.length - 1 ? items[index + 1] : null);
